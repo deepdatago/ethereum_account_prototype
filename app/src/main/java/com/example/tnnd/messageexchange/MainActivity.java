@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("debug before start");
             node.start();
             System.out.println("debug after start");
-            if (false) // change this to false after the account is created
+            if (true) // change this to false after the account is created
             {
                 Account newAccount = null;
                 newAccount = ks.newAccount("Creation password");

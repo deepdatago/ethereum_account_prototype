@@ -128,11 +128,12 @@ public class MainActivity extends AppCompatActivity {
         BigInt chain = new BigInt(nodeConfig.getEthereumNetworkID());
 
         try {
-            Node node = Geth.newNode(getFilesDir() + "/keystore", nodeConfig);
+            // Node node = Geth.newNode(getFilesDir() + "/keystore", nodeConfig);
+            Node node = Geth.newNode(getFilesDir() + "/config", nodeConfig);
             System.out.println("debug before start");
             node.start();
             System.out.println("debug after start");
-            if (true) // change this to false after the account is created
+            if (false) // change this to false after the account is created
             {
                 Account newAccount = null;
                 newAccount = ks.newAccount("Creation password");
@@ -141,14 +142,19 @@ public class MainActivity extends AppCompatActivity {
                 return;
 
             }
+
+            // following code is to demo the signing of transaction
             accounts = ks.getAccounts();
             account = accounts.get(0);
             ks.unlock(account, "Creation password");
             accountsStr = account.getAddress().getHex();
             System.out.println("debug acct hex: " + accountsStr);
             nonce = node.getEthereumClient().getPendingNonceAt(context, account.getAddress());
+
+            // replace data by public key
             String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
             System.out.println("debug 2");
+
             Transaction tx = new Transaction(
                     (long) nonce,
                     new Address(publicAddressStr),

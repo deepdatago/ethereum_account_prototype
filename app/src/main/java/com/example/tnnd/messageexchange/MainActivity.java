@@ -71,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
                         accounts = ks.getAccounts();
                         if (accounts.size() <= 1) {
                             createUser();
+                            accounts = ks.getAccounts();
                         }
                         account = accounts.get(1);
 
@@ -128,6 +129,7 @@ public class MainActivity extends AppCompatActivity {
             accounts = ks.getAccounts();
             if (accounts.size() <= 0) {
                 createUser();
+                accounts = ks.getAccounts();
             }
             account = accounts.get(0);
 

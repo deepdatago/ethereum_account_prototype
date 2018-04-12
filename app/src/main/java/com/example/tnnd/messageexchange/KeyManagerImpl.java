@@ -25,7 +25,7 @@ import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Base64;
+import android.util.Base64;
 import java.util.Date;
 import java.util.Map;
 
@@ -211,12 +211,12 @@ public class KeyManagerImpl implements KeyManager {
         // encrypt the plaintext using the public key
         cipher.init(Cipher.ENCRYPT_MODE, key);
         cipherText = cipher.doFinal(text);
-        return new String(Base64.getEncoder().encode(cipherText));
+        return new String(Base64.encode(cipherText, Base64.DEFAULT));
     }    
     
     public String decryptTextBase64(byte[] text, PrivateKey key) throws Exception
     {
-    	byte[] decodedBytes = Base64.getDecoder().decode(text);
+    	byte[] decodedBytes = Base64.decode(text, Base64.DEFAULT);
         byte[] dectyptedText = null;
         // decrypt the text using the private key
         Cipher cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding");

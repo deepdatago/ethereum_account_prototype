@@ -35,6 +35,7 @@ import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.util.UUID;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -52,8 +53,8 @@ public class MainActivity extends AppCompatActivity {
     private NodeConfig nodeConfig = new NodeConfig();
     private final String publicAddressStr = "0xce66ae967e95f6f90defa8b58e6ab4a721c3c7fb";
     private Node node = null; // Geth.newNode(getFilesDir() + "/.eth1", nodeConfig);
-
-
+    private PublicKey publicKey = null;
+    private PrivateKey privateKey = null;
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -62,6 +63,9 @@ public class MainActivity extends AppCompatActivity {
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
             switch (item.getItemId()) {
                 case R.id.navigation_home:
+                    mTextMessage.setText("Home");
+                    return true;
+                case R.id.navigation_dashboard:
                     String transactionStr = "transaction";
                     Accounts accounts = null;
                     Account account = null;
@@ -75,22 +79,31 @@ public class MainActivity extends AppCompatActivity {
                         }
                         account = accounts.get(1);
 
+                        System.out.println("from_address: " + account.getAddress().getHex());
+
+
                         // replace data by public key
-                        String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
+                        // String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
+                        // this.publicKey = getPublicKey();
+                        getPublicPrivateKeys();
+
+                        UUID idOne = UUID.randomUUID();
+                        String symmetricKey = idOne.toString().replace("-", "");
+                        System.out.println("symmetric key: " + symmetricKey);
+
+                        String data = encryptData(publicKey, symmetricKey);
+                        // String decryptedData = decryptData(privateKey, data);
+                        // System.out.println("decrypted data: " + decryptedData);
 
                         transactionStr = signTransaction(account, data.getBytes("UTF8"));
+                        System.out.println("friend request transaction: " + transactionStr);
+
                     } catch (Exception e) {
                         transactionStr = e.getMessage();
                         e.printStackTrace();
 
                     }
-
                     mTextMessage.setText(transactionStr);
-                    // mTextMessage.setText(newAcc.getAddress().getHex());
-                    // mTextMessage.setText(R.string.title_home);
-                    return true;
-                case R.id.navigation_dashboard:
-                    mTextMessage.setText(R.string.title_dashboard);
                     return true;
                 case R.id.navigation_notifications:
                     mTextMessage.setText(R.string.title_notifications);
@@ -132,12 +145,14 @@ public class MainActivity extends AppCompatActivity {
                 accounts = ks.getAccounts();
             }
             account = accounts.get(0);
+            System.out.println("to_address: " + account.getAddress().getHex());
 
             // replace data by public key
             //String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
             String data = createPublicKey();
             System.out.println("public key: " + data);
             transactionStr = signTransaction(account, data.getBytes("UTF8"));
+            System.out.println("register transaction: " + transactionStr);
         } catch (Exception e) {
             transactionStr = e.getMessage();
             e.printStackTrace();
@@ -176,7 +191,8 @@ public class MainActivity extends AppCompatActivity {
         try {
             this.ks.unlock(account, this.defaultPassword);
 
-            nonce = this.node.getEthereumClient().getPendingNonceAt(context, account.getAddress());
+            // nonce = this.node.getEthereumClient().getPendingNonceAt(context, account.getAddress());
+            nonce = 0;
             Transaction tx = new Transaction(
                     (long) nonce,
                     new Address(this.publicAddressStr),
@@ -189,12 +205,12 @@ public class MainActivity extends AppCompatActivity {
             Transaction signed = ks.signTx(account, tx, chain);
             // node.getEthereumClient().
             // signed.getFrom(chain);
-            System.out.println("signed.getFrom: " + signed.getFrom(chain).getHex());
+            // System.out.println("signed.getFrom: " + signed.getFrom(chain).getHex());
             returnStr = signed.encodeJSON();
             Transaction newTrans = Geth.newTransactionFromJSON(returnStr);
             newTrans.getFrom(chain);
-            System.out.println("newTrans.getFrom: " + newTrans.getFrom(chain).getHex());
-            System.out.println("signed encodeJSON: " + returnStr);
+            // System.out.println("newTrans.getFrom: " + newTrans.getFrom(chain).getHex());
+            // System.out.println("signed encodeJSON: " + returnStr);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -300,4 +316,62 @@ public class MainActivity extends AppCompatActivity {
         return ret;
     }
 
+    private void getPublicPrivateKeys() {
+        KeyManager keyManager = new KeyManagerImpl();
+        String privKeyFileName = getFilesDir() + "/keystore/" + "privatekey.pem";
+        String publicKeyFileName = getFilesDir() + "/keystore/" +"publickey.pem";
+
+        try {
+            this.privateKey = keyManager.loadPrivateKeyFromRSAPEM(privKeyFileName);
+            this.publicKey = keyManager.loadPublicKeyFromRSAPEM(publicKeyFileName);
+            // publicKey = keyManager.loadPublicKeyFromRSA_X509_CertificatePEM(certificateFileName);
+        } catch (NoSuchProviderException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+            return;
+        } catch (NoSuchAlgorithmException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+            return;
+        } catch (IOException e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+            return;
+        } catch (Exception e1) {
+            // TODO Auto-generated catch block
+            e1.printStackTrace();
+            return;
+        }
+    }
+
+    private String encryptData(PublicKey publicKey, String data) {
+        String encryptedBase64Str = null;
+
+        KeyManager keyManager = new KeyManagerImpl();
+        try {
+            encryptedBase64Str = keyManager.encryptTextBase64(data.getBytes(), publicKey);
+            // System.out.println("Encrypted text: " + encryptedBase64Str);
+            // String decryptedStr = keyManager.decryptTextBase64(encryptedBase64Str.getBytes(), privateKey);
+            // System.out.println("Decrypted text: " + decryptedStr);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+        }
+        return encryptedBase64Str;
+    }
+    private String decryptData(PrivateKey privateKey, String data) {
+        String decryptedStr = null;
+
+        KeyManager keyManager = new KeyManagerImpl();
+        try {
+            decryptedStr = keyManager.decryptTextBase64(data.getBytes(), privateKey);
+            System.out.println("Decrypted text: " + decryptedStr);
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+        }
+        return decryptedStr;
+    }
 }

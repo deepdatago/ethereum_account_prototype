@@ -17,11 +17,11 @@ import org.ethereum.geth.NodeConfig;
 import org.ethereum.geth.Address;
 import org.ethereum.geth.BigInt;
 import org.ethereum.geth.Transaction;
-
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.io.File;
+import java.net.URLEncoder;
 
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -34,8 +34,10 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
-import java.util.Base64;
+import android.util.Base64;
 import java.util.UUID;
+import java.security.Signature;
+import org.json.JSONObject;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -61,15 +63,15 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public boolean onNavigationItemSelected(@NonNull MenuItem item) {
+            String transactionStr = "transaction";
+            Accounts accounts = null;
+            Account account = null;
+
             switch (item.getItemId()) {
                 case R.id.navigation_home:
                     mTextMessage.setText("Home");
                     return true;
                 case R.id.navigation_dashboard:
-                    String transactionStr = "transaction";
-                    Accounts accounts = null;
-                    Account account = null;
-
                     try {
                         // following code is to demo the signing of transaction
                         accounts = ks.getAccounts();
@@ -106,7 +108,49 @@ public class MainActivity extends AppCompatActivity {
                     mTextMessage.setText(transactionStr);
                     return true;
                 case R.id.navigation_notifications:
-                    mTextMessage.setText(R.string.title_notifications);
+                    try {
+                        // following code is to demo the signing of transaction
+                        accounts = ks.getAccounts();
+                        if (accounts.size() <= 0) {
+                            createUser();
+                            accounts = ks.getAccounts();
+                        }
+                        account = accounts.get(0);
+
+                        System.out.println("from_address: " + account.getAddress().getHex());
+
+
+                        // replace data by public key
+                        // String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
+                        // this.publicKey = getPublicKey();
+                        getPublicPrivateKeys();
+                        // byte[] data = "012345678901234567890123456789012345678901234567890123456789".getBytes();
+                        long unixTime = System.currentTimeMillis() / 1000L;
+                        String timeString = Long.toString(unixTime);
+                        System.out.println("time: " + timeString);
+                        byte[] data = timeString.getBytes();
+
+                        Signature sig = Signature.getInstance("SHA256withRSA");
+                        sig.initSign(privateKey);
+                        sig.update(data);
+                        byte[] signatureBytes = sig.sign();
+                        transactionStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
+                        transactionStr = URLEncoder.encode(transactionStr,"UTF-8");
+                        System.out.println("Signature:" + transactionStr);
+                        transactionStr = "/?from_address=" + account.getAddress().getHex() + "&date_time="+timeString+"&b64encoded_signature="+transactionStr;
+
+                        System.out.println("request data: " + transactionStr);
+
+
+
+                    } catch (Exception e) {
+                        transactionStr = e.getMessage();
+                        e.printStackTrace();
+
+                    }
+                    mTextMessage.setText(transactionStr);
+
+                    // mTextMessage.setText(R.string.title_notifications);
                     return true;
             }
             return false;
@@ -144,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
                 createUser();
                 accounts = ks.getAccounts();
             }
-            account = accounts.get(0);
+            account = accounts.get(1);
             System.out.println("to_address: " + account.getAddress().getHex());
 
             // replace data by public key

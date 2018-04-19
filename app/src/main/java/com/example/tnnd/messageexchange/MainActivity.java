@@ -57,6 +57,10 @@ public class MainActivity extends AppCompatActivity {
     private Node node = null; // Geth.newNode(getFilesDir() + "/.eth1", nodeConfig);
     private PublicKey publicKey = null;
     private PrivateKey privateKey = null;
+    private final String symmetricKeyForAllFriends = "5d8324e83dc14336914152775d1bb757";
+    private final String symmetricKey = "e1edb2d92c8f48de9029e111afff4b4b";
+
+
 
     private BottomNavigationView.OnNavigationItemSelectedListener mOnNavigationItemSelectedListener
             = new BottomNavigationView.OnNavigationItemSelectedListener() {
@@ -90,14 +94,33 @@ public class MainActivity extends AppCompatActivity {
                         getPublicPrivateKeys();
 
                         UUID idOne = UUID.randomUUID();
-                        String symmetricKey = idOne.toString().replace("-", "");
+                        // symmetricKey = idOne.toString().replace("-", "");
+                        // symmetricKey = "e1edb2d92c8f48de9029e111afff4b4b";
                         System.out.println("symmetric key: " + symmetricKey);
 
-                        String data = encryptData(publicKey, symmetricKey);
+                        // UUID id2 = UUID.randomUUID();
+                        // symmetricKeyForAllFriends = id2.toString().replace("-", "");
+                        System.out.println("symmetric key for all friends: " + symmetricKeyForAllFriends);
+
+                        // friend request is in JSON format:
+                        // {
+                        //      "friend_request_symmetric_key" : "<symmetricKey>",
+                        //      "all_friends_symmetric_key" : "<symmetricKeyForAllFriends>"
+                        // }
+                        JSONObject requestNode = new JSONObject();
+                        requestNode.put("friend_request_symmetric_key", symmetricKey);
+                        requestNode.put("all_friends_symmetric_key", symmetricKeyForAllFriends);
+
+                        String data = encryptData(publicKey, requestNode.toString());
                         // String decryptedData = decryptData(privateKey, data);
                         // System.out.println("decrypted data: " + decryptedData);
 
                         transactionStr = signTransaction(account, data.getBytes("UTF8"));
+                        JSONObject friendRequestNode = new JSONObject();
+                        friendRequestNode.put("to_address", "0x08438F6Cba0396B747d08951Ba75f79481F68A5d");
+                        friendRequestNode.put("from_address", account.getAddress().getHex());
+                        friendRequestNode.put("request", transactionStr);
+                        transactionStr = friendRequestNode.toString();
                         System.out.println("friend request transaction: " + transactionStr);
 
                     } catch (Exception e) {
@@ -137,7 +160,7 @@ public class MainActivity extends AppCompatActivity {
                         transactionStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
                         transactionStr = URLEncoder.encode(transactionStr,"UTF-8");
                         System.out.println("Signature:" + transactionStr);
-                        transactionStr = "/?from_address=" + account.getAddress().getHex() + "&date_time="+timeString+"&b64encoded_signature="+transactionStr;
+                        transactionStr = "/?from_address=" + account.getAddress().getHex() + "&time_stamp="+timeString+"&b64encoded_signature="+transactionStr;
 
                         System.out.println("request data: " + transactionStr);
 
@@ -188,7 +211,7 @@ public class MainActivity extends AppCompatActivity {
                 createUser();
                 accounts = ks.getAccounts();
             }
-            account = accounts.get(1);
+            account = accounts.get(0);
             System.out.println("to_address: " + account.getAddress().getHex());
 
             // replace data by public key
@@ -196,6 +219,16 @@ public class MainActivity extends AppCompatActivity {
             String data = createPublicKey();
             System.out.println("public key: " + data);
             transactionStr = signTransaction(account, data.getBytes("UTF8"));
+            JSONObject requestNode = new JSONObject();
+            requestNode.put("sender_address", account.getAddress().getHex());
+            String namePlainText = "NameA";
+
+            String encryptedName = encryptDataWithSymmetricKey(symmetricKeyForAllFriends, namePlainText);
+            String decryptedName = decryptDataWithSymmetricKey(symmetricKeyForAllFriends, encryptedName);
+            System.out.println("decrypted name: " + decryptedName);
+            requestNode.put("name", encryptedName);
+            requestNode.put("transaction", transactionStr);
+            transactionStr = requestNode.toString();
             System.out.println("register transaction: " + transactionStr);
         } catch (Exception e) {
             transactionStr = e.getMessage();
@@ -417,5 +450,92 @@ public class MainActivity extends AppCompatActivity {
         } finally {
         }
         return decryptedStr;
+    }
+
+    private String encryptDataWithSymmetricKey(String inKey, String data) {
+        SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
+
+        Cipher cipher = null;
+        try {
+            // int maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
+            // System.out.println("max allowed length: " + maxKeyLen);
+
+
+            cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+            cipher.init(Cipher.ENCRYPT_MODE, key);
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchProviderException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        byte[] cipherText = new byte[cipher.getOutputSize(data.length())];
+        int ctLength = 0;
+
+        try {
+            ctLength = cipher.update(data.getBytes(), 0, data.length(), cipherText, 0);
+            ctLength += cipher.doFinal(cipherText, ctLength);
+        } catch (ShortBufferException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (BadPaddingException e)
+        {
+            e.printStackTrace();
+
+        } catch (IllegalBlockSizeException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        String encodedEncryptedStr = new String(Base64.encode(cipherText, Base64.DEFAULT));
+        return encodedEncryptedStr;
+    }
+
+    private String decryptDataWithSymmetricKey(String inKey, String data) {
+        byte[] decryptedPlainText = null;
+        int ptLength = 0;
+        Cipher cipher = null;
+        SecretKeySpec key = new SecretKeySpec(inKey.getBytes(), "AES");
+        try {
+            // int maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
+            // System.out.println("max allowed length: " + maxKeyLen);
+
+
+            cipher = Cipher.getInstance("AES/ECB/PKCS7Padding", "BC");
+            cipher.init(Cipher.DECRYPT_MODE, key);
+        } catch (NoSuchAlgorithmException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchProviderException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (NoSuchPaddingException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        } catch (InvalidKeyException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        try {
+            decryptedPlainText = cipher.doFinal(Base64.decode(data, Base64.DEFAULT));
+        } catch (BadPaddingException e)
+        {
+            e.printStackTrace();
+
+        } catch (IllegalBlockSizeException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+
+        String decryptedString = new String(decryptedPlainText);
+        return decryptedString;
     }
 }

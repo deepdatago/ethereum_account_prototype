@@ -73,7 +73,46 @@ public class MainActivity extends AppCompatActivity {
 
             switch (item.getItemId()) {
                 case R.id.navigation_home:
-                    mTextMessage.setText("Home");
+                    // decrypt friend request, and approve request
+                    // input:         {
+                    // "from_address": "8E8b666F134EDd37D95eD182F5AC33d8a21E359E",
+                    //    "name": "GxYUXbZygO1gFCwgZVI32w==\n",
+                    //    "request": "Ub6yEsQEIdrNMf6OXsxw43XN5TnUK48oU61Hjg5sVi5j1daiBn1OFnjPuSHcFXLLyh9x8dw/MzUy\nEj6ykofLNl2OldvLEqlWkpXld+QJyZ5uatLP7nf9Z/HYSdz8sGPUOJAbITG5uGhBplZYZ5owEqny\nUftfu8EON83iBJX2O/AMXzw6ZFtHUv3B7JJZ23/NOivHZRq0aRQme/bSQ2SBACEmOmF4feZxZ+z3\nHAQTAkKCs1AMk67iXmq8m1pZu6s3vC5Tf0kkT/KLXyVJHpqOg2kkD4QBybC34x/UPZm3OUlhXuS8\npgBap7YbYU13WSRIpi2iKM3M8QO+W3x0gGT7Kg==\n"
+                    // }
+                    String requestStr = null;
+                    try {
+                        // following code is to demo the signing of transaction
+                        accounts = ks.getAccounts();
+                        account = accounts.get(0);
+
+                        // String inputStr = "{\"from_address\": \"8E8b666F134EDd37D95eD182F5AC33d8a21E359E\", \"name\": \"GxYUXbZygO1gFCwgZVI32w==\n\",\"request\": \"Ub6yEsQEIdrNMf6OXsxw43XN5TnUK48oU61Hjg5sVi5j1daiBn1OFnjPuSHcFXLLyh9x8dw/MzUyEj6ykofLNl2OldvLEqlWkpXld+QJyZ5uatLP7nf9Z/HYSdz8sGPUOJAbITG5uGhBplZYZ5owEqnyUftfu8EON83iBJX2O/AMXzw6ZFtHUv3B7JJZ23/NOivHZRq0aRQme/bSQ2SBACEmOmF4feZxZ+z3HAQTAkKCs1AMk67iXmq8m1pZu6s3vC5Tf0kkT/KLXyVJHpqOg2kkD4QBybC34x/UPZm3OUlhXuS8pgBap7YbYU13WSRIpi2iKM3M8QO+W3x0gGT7Kg==\"}";
+                        String inputStr = "{\"from_address\": \"0x8E8b666F134EDd37D95eD182F5AC33d8a21E359E\", \"name\": \"GxYUXbZygO1gFCwgZVI32w==\n\",\"request\": \"Ub6yEsQEIdrNMf6OXsxw43XN5TnUK48oU61Hjg5sVi5j1daiBn1OFnjPuSHcFXLLyh9x8dw/MzUy\\nEj6ykofLNl2OldvLEqlWkpXld+QJyZ5uatLP7nf9Z/HYSdz8sGPUOJAbITG5uGhBplZYZ5owEqny\\nUftfu8EON83iBJX2O/AMXzw6ZFtHUv3B7JJZ23/NOivHZRq0aRQme/bSQ2SBACEmOmF4feZxZ+z3\\nHAQTAkKCs1AMk67iXmq8m1pZu6s3vC5Tf0kkT/KLXyVJHpqOg2kkD4QBybC34x/UPZm3OUlhXuS8\\npgBap7YbYU13WSRIpi2iKM3M8QO+W3x0gGT7Kg==\\n\"}";
+
+                        JSONObject requestNode = new JSONObject(inputStr);
+                        String data = requestNode.get("request").toString();
+                        String from_address = requestNode.get("from_address").toString();
+                        // int dLen = data.length();
+
+                        requestStr = decryptData(privateKey, data);
+                        JSONObject keyNode = new JSONObject(requestStr);
+                        String requester_all_friends_key = keyNode.get("all_friends_symmetric_key").toString();
+                        String received_key = keyNode.get("friend_request_symmetric_key").toString();
+                        requestStr = " name: " + decryptDataWithSymmetricKey(requester_all_friends_key, requestNode.get("name").toString());
+                        String friend_request_key = keyNode.get("friend_request_symmetric_key").toString();
+                        requestStr += "\nfriend_key: " + friend_request_key;
+
+                        // create approve request
+                        transactionStr = approveFriendRequest(account, from_address, received_key, symmetricKeyForAllFriends);
+                        System.out.println("approval request: " + transactionStr);
+
+                        // validating xko52z9PyQbaP/Jopbrmr0W5ere/pbxWvBkzQ0y2rX3O2mDewMPdw7PHO9sXmt9qSCMEIEA88aIN\nq+sbfUfVT3D0cEPqB4Uo3LO9wzWkoaU=
+                        // String validateStr = "xko52z9PyQbaP/Jopbrmr0W5ere/pbxWvBkzQ0y2rX3O2mDewMPdw7PHO9sXmt9qSCMEIEA88aIN\nq+sbfUfVT3D0cEPqB4Uo3LO9wzWkoaU=";
+                        // validateStr = decryptDataWithSymmetricKey(received_key, validateStr);
+                        // System.out.println("validated str: " + validateStr);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                    mTextMessage.setText(requestStr);
                     return true;
                 case R.id.navigation_dashboard:
                     try {
@@ -84,8 +123,9 @@ public class MainActivity extends AppCompatActivity {
                             accounts = ks.getAccounts();
                         }
                         account = accounts.get(1);
+                        Account account_0 = accounts.get(0);
 
-                        System.out.println("from_address: " + account.getAddress().getHex());
+                        // System.out.println("from_address: " + account.getAddress().getHex());
 
 
                         // replace data by public key
@@ -110,18 +150,23 @@ public class MainActivity extends AppCompatActivity {
                         JSONObject requestNode = new JSONObject();
                         requestNode.put("friend_request_symmetric_key", symmetricKey);
                         requestNode.put("all_friends_symmetric_key", symmetricKeyForAllFriends);
+                        // System.out.println("length to encrypt: " + requestNode.toString().length());
 
                         String data = encryptData(publicKey, requestNode.toString());
+                        // System.out.println("length of data: " + data.length() + " data: " + data);
+
                         // String decryptedData = decryptData(privateKey, data);
                         // System.out.println("decrypted data: " + decryptedData);
+                        transactionStr = getFriendRequest(account, account_0, data);
+                        System.out.println("friend request transaction: " + "length: " + transactionStr.length() + " string: " + transactionStr);
 
-                        transactionStr = signTransaction(account, data.getBytes("UTF8"));
-                        JSONObject friendRequestNode = new JSONObject();
-                        friendRequestNode.put("to_address", "0x08438F6Cba0396B747d08951Ba75f79481F68A5d");
-                        friendRequestNode.put("from_address", account.getAddress().getHex());
-                        friendRequestNode.put("request", transactionStr);
-                        transactionStr = friendRequestNode.toString();
-                        System.out.println("friend request transaction: " + transactionStr);
+                        if (accounts.size() <= 2) {
+                            createUser();
+                            accounts = ks.getAccounts();
+                        }
+                        account = accounts.get(2);
+                        transactionStr = getFriendRequest(account, account_0, data);
+                        System.out.println("friend request transaction: " + "length: " + transactionStr.length() + " string: " + transactionStr);
 
                     } catch (Exception e) {
                         transactionStr = e.getMessage();
@@ -212,24 +257,21 @@ public class MainActivity extends AppCompatActivity {
                 accounts = ks.getAccounts();
             }
             account = accounts.get(0);
-            System.out.println("to_address: " + account.getAddress().getHex());
-
-            // replace data by public key
-            //String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
-            String data = createPublicKey();
-            System.out.println("public key: " + data);
-            transactionStr = signTransaction(account, data.getBytes("UTF8"));
-            JSONObject requestNode = new JSONObject();
-            requestNode.put("sender_address", account.getAddress().getHex());
-            String namePlainText = "NameA";
-
-            String encryptedName = encryptDataWithSymmetricKey(symmetricKeyForAllFriends, namePlainText);
-            String decryptedName = decryptDataWithSymmetricKey(symmetricKeyForAllFriends, encryptedName);
-            System.out.println("decrypted name: " + decryptedName);
-            requestNode.put("name", encryptedName);
-            requestNode.put("transaction", transactionStr);
-            transactionStr = requestNode.toString();
-            System.out.println("register transaction: " + transactionStr);
+            transactionStr = getRegisterRequest(account);
+            if (accounts.size() <= 1) {
+                createUser();
+                accounts = ks.getAccounts();
+            }
+            account = accounts.get(1);
+            getRegisterRequest(account);
+            // transactionStr += "\n" + getRegisterRequest(account);
+            if (accounts.size() <= 2) {
+                createUser();
+                accounts = ks.getAccounts();
+            }
+            account = accounts.get(2);
+            getRegisterRequest(account);
+            // transactionStr += "\n" + getRegisterRequest(account);
         } catch (Exception e) {
             transactionStr = e.getMessage();
             e.printStackTrace();
@@ -537,5 +579,85 @@ public class MainActivity extends AppCompatActivity {
 
         String decryptedString = new String(decryptedPlainText);
         return decryptedString;
+    }
+
+    private String getRegisterRequest(Account account) {
+        String transactionStr = null;
+        try {
+            System.out.println("to_address: " + account.getAddress().getHex());
+
+            // replace data by public key
+            //String data = "very long data very long data very long data very long data very long data very long data very long data very long data very long data very long data ";
+            String data = createPublicKey();
+            System.out.println("public key: " + data);
+            transactionStr = signTransaction(account, data.getBytes("UTF8"));
+            System.out.println("register input length: " + transactionStr.length() + " string: " + transactionStr);
+            JSONObject requestNode = new JSONObject();
+            requestNode.put("sender_address", account.getAddress().getHex());
+            String namePlainText = "NameA";
+
+            String encryptedName = encryptDataWithSymmetricKey(symmetricKeyForAllFriends, namePlainText);
+            String decryptedName = decryptDataWithSymmetricKey(symmetricKeyForAllFriends, encryptedName);
+            System.out.println("decrypted name: " + decryptedName);
+            requestNode.put("name", encryptedName);
+            requestNode.put("transaction", transactionStr);
+            transactionStr = requestNode.toString();
+            System.out.println("register transaction: " + transactionStr);
+        } catch (Exception e) {
+            transactionStr = e.getMessage();
+            e.printStackTrace();
+
+        }
+        return transactionStr;
+    }
+
+    private String getFriendRequest(Account fromAccount, Account toAccount, String data) {
+        // for key of 2048bits, the encrypted data cannot exceed 256 bytes
+        // https://stackoverflow.com/questions/10007147/getting-a-illegalblocksizeexception-data-must-not-be-longer-than-256-bytes-when
+        String transactionStr = null;
+        JSONObject friendRequestNode = new JSONObject();
+        try {
+            transactionStr = signTransaction(fromAccount, data.getBytes("UTF8"));
+            // System.out.println("friend request input: " + "length: " + transactionStr.length() + " string: " + transactionStr);
+
+            // action_types are from server:
+            // FRIEND_REQUEST_REQUESTED = 0
+            // FRIEND_REQUEST_ACCEPTED = 1
+            // FRIEND_REQUEST_REJECTED = 2
+            friendRequestNode.put("action_type", 0);
+
+            friendRequestNode.put("to_address", toAccount.getAddress().getHex());
+            friendRequestNode.put("from_address", fromAccount.getAddress().getHex());
+            friendRequestNode.put("request", transactionStr);
+        } catch (org.json.JSONException e) {
+            e.printStackTrace();
+        } catch (java.io.UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+        return friendRequestNode.toString();
+    }
+
+    private String approveFriendRequest(Account account, String from_address, String mutualKey, String myKeyForAllFriends) {
+        String returnStr = null;
+        try {
+            JSONObject inputNode = new JSONObject();
+            inputNode.put("all_friends_symmetric_key", myKeyForAllFriends);
+            // use received_key to encrypt approval request
+            String encApprovalStr = encryptDataWithSymmetricKey(mutualKey, inputNode.toString());
+            returnStr = signTransaction(account, encApprovalStr.getBytes("UTF8"));
+
+            JSONObject approveNode = new JSONObject();
+            approveNode.put("action_type", 1);
+            approveNode.put("from_address", from_address);
+            approveNode.put("to_address", account.getAddress().getHex());
+            approveNode.put("request", returnStr);
+            returnStr = approveNode.toString();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return returnStr;
+
     }
 }

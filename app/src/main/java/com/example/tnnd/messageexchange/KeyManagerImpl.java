@@ -1,11 +1,14 @@
 package com.example.tnnd.messageexchange;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
@@ -211,7 +214,7 @@ public class KeyManagerImpl implements KeyManager {
         // encrypt the plaintext using the public key
         cipher.init(Cipher.ENCRYPT_MODE, key);
         cipherText = cipher.doFinal(text);
-        return new String(Base64.encode(cipherText, Base64.DEFAULT));
+        return new String(Base64.encode(cipherText, Base64.DEFAULT)).replaceAll("\n", "");
     }    
     
     public String decryptTextBase64(byte[] text, PrivateKey key) throws Exception
@@ -275,5 +278,64 @@ public class KeyManagerImpl implements KeyManager {
         }
         if (newMaxKeyLength < 256)
             throw new RuntimeException(errorString); // hack failed
-    }	
+    }
+
+	public PublicKey loadPublicKeyFromRSAPEMString(String publicKeyStr) {
+		try {
+			String instanceName = "RSA"; // RSA
+			KeyFactory factory = KeyFactory.getInstance(instanceName, this.providerName);
+			byte[] keyBytes = Base64.decode(publicKeyStr, Base64.DEFAULT);
+
+
+			X509EncodedKeySpec privKeySpec =
+					new X509EncodedKeySpec(keyBytes);
+
+			PublicKey publicKey = factory.generatePublic(privKeySpec);
+
+			return publicKey;
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
+	public String getKeyPEM(String keyFileName) {
+		// check if mFileDir + /keystore + keyname exists
+		File publicKeyFile = new File(keyFileName);
+		if (! publicKeyFile.exists()) {
+			return "";
+		}
+		String keyContent = null;
+		try {
+			keyContent = getStringFromFile(keyFileName);
+		} catch (Exception e) {
+			e.printStackTrace();
+			return null;
+		}
+
+		return keyContent;
+	}
+
+	private String getStringFromFile (String filePath) throws Exception {
+		File fl = new File(filePath);
+		FileInputStream fin = new FileInputStream(fl);
+		String ret = convertStreamToString(fin);
+		//Make sure you close all streams.
+		fin.close();
+		return ret;
+	}
+
+	private String convertStreamToString(InputStream is) throws Exception {
+		BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+		StringBuilder sb = new StringBuilder();
+		String line = null;
+		while ((line = reader.readLine()) != null) {
+			sb.append(line).append("\n");
+		}
+		reader.close();
+		return sb.toString();
+	}
+
+
 }

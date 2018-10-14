@@ -48,7 +48,15 @@ public interface KeyManager {
 		NoSuchAlgorithmException,
 		NoSuchProviderException,
 		InvalidKeySpecException;
-	
+
+	/**
+	 * Generate public key from a RSA public key PEM string format
+	 *
+	 * @param  publicKeyStr  public key as String
+	 * @return      PublicKey
+	 */
+	public PublicKey loadPublicKeyFromRSAPEMString(String publicKeyStr);
+
 	/**
 	 * Encrypt a byte[] with given public key, and encode it with Base64
 	 *
@@ -66,4 +74,13 @@ public interface KeyManager {
 	 * @return      Plain text of the encrypted byte[]
 	 */	    
     public String decryptTextBase64(byte[] text, PrivateKey key) throws Exception;
+
+	/**
+	 * Decrypt a byte[] which is Base64 encoded with given private key
+	 *
+	 * @param  keyFileName file name for the public/private key
+	 * @return      Plain text of the content of the key file
+	 */
+	public String getKeyPEM(String keyFileName);
+
 }

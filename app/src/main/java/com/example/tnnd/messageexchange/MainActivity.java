@@ -250,6 +250,64 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
+            createPublicKey();
+            getPublicPrivateKeys();
+            String encryptedStr = encryptData(publicKey, "abc");
+            String decryptedStr = decryptData(privateKey, encryptedStr);
+
+
+            KeyManager keyManager = new KeyManagerImpl();
+            String publicKeyPEM = keyManager.getKeyPEM(getPublicKeyFileName());
+            System.out.println(publicKeyPEM);
+
+            String pubKeyStr = "" +
+                    "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAs0Tx0PSR5bUQt0FN0q2c\n" +
+                    "lxQ+yrdyOnjCWyW/NZLFCbFYXY7qvdEm1vIO2dMAi7NBN0nEVbKUYR43rY/2PZiJ\n" +
+                    "8Q/o6B5vpR2w47BOUAM8tgksqrf+mNCrYpW6dSPuS1dOAWP9lhR3Ow6Gt9yikZ/f\n" +
+                    "YgRiVPMwHGiDdkVUOwLfz2oo0wehqtQTTx0FdgP7PB6wB2ev21k5unfQRH4GXXMh\n" +
+                    "Fy5q5xKr0gS0J3xTUOSHzoxdsDdOjK9cJk1bP0mxqMY5bWvBlyVVR5AU13qPKe5D\n" +
+                    "X3iYDeqdkvLs/v8eZ+FIzLw9aRr9xMeeepk1xCU5ldJHcqMplQ625AtZc00/OyGX\n" +
+                    "6BJKIh9LBp8Usl5+DSLc6OFxlC5hhHVST6NbNDRziXK4CdoQBg9jl6sKUCu5kHmX\n" +
+                    "D3aXjuo/EE8VBXf+3aIAV/8TiJIMd1i1Vp1Pwi9J8dIc1MkzYs5ecvSq683nGdY6\n" +
+                    "F9pYj3OWKucz36eNc1Tl26I8C5huSkJfaXYfhqR3tE9MWvCqMsvilPX43ZPclziw\n" +
+                    "31dF+1JuL+aBP/7wQYMiqpWNrw1wOR6P7Nlrm44eLHZeybqx3RxIAK0i1vQU01LW\n" +
+                    "YdVn/+bvYz6zrh52vb07kTYmMxKIbbD6y6RV8NR4maaJBjyoGO4OMWP9wOGx6fKV\n" +
+                    "0guuUukfZ+CTkZMkusGiBdUCAwEAAQ==";
+                    // "-----END PUBLIC KEY-----";
+            pubKeyStr = publicKeyPEM;
+            /*
+            pubKeyStr =
+                    "MIMAAiMwDQYJKoZIhvcNAQEBBQADgwACDwAwggIKAoICAQDFg9hGyIQZavKHN27k\n" +
+                    "DTa4EcA9zyj13dJyrvqDhDLUNXIOK0z4nura5ojoyfdVo7hj92r5d031InhhdCCA\n" +
+                    "VZB6ie4WYU/zXL2vadnYg/U9gBM8e6UAlHz6NKH+CcNqD52glY8vko7FsxoswtZ+\n" +
+                    "1RyfurO6L615akStoZq1kPM0dwSrz+WPkRMKmwxcHAhr0iqEyTdjr86xzjdqJKBS\n" +
+                    "4OQfYIk4vagp8kZ+BTULfYC7nykKqlo1cfBauKyAGYJZp0Sd7vEE1sp5aq65vvCC\n" +
+                    "sVJLpRdNJ85zAxfOF44OrW/4hUafKD3PqTJDWVxpQOMTNnmdd/DIMRhebBjznoLW\n" +
+                    "2lnk+tzRI6/U6BY5Es5gKlQ/TjD2iTdUEx+F1lnmZFt/n4ibV2gXrL3gIOHnH447\n" +
+                    "XTlyD/DwKb2bqPNjqJVssVeeNYZEgA9gaEEXHD0Op+VeQ8fpdefonZ40oYdzZnbq\n" +
+                    "0X+KDKOBWpceQU3oqY0naI2cWm6f5B5AIOFuJLG26e8ysefIYfft7/9bklbKZzyU\n" +
+                    "RsOLUBIbOXqx+XIyF+uX+ueSkyutqi+ea1+uLo9bYIyNpPRGLFgXR0U+gouwLyM4\n" +
+                    "Mhe9S2M1MRyJWS/RPsaGC5cu5uPS0E6Pdlx7xsY6+NvOSnCJIbKerIX3vvRYxwf7\n" +
+                    "GdAqspw5MuNcuCZbXBknX/vWuQIDAQAB";
+                    */
+            /*
+            pubKeyStr = "MIICIjANBgkqhkiG9w0BAQEFAAOCAg8AMIICCgKCAgEAv/1SCD9C8GuD4c4ANTpy\n" +
+                    "FXPM5G4J4CjRf82MFMB0LpHSob4qmWupvLhCJTGvvjZHZ0NMHAiyyApKb7LsokW8\n" +
+                    "B1wmIw5HZZTL8TC9B7KefXc0wVvH3Uk+bdUGyCdymijmK06nAQ5CZCDLD+m6wL14\n" +
+                    "hqkzYPHc7A5TvAErwAcAvkL6bwa/tXDdmy5P3QivK+ZfkDZ8+E2jsn5FSoHrE8ZB\n" +
+                    "KPfPCmgE8+SHHvoeEazpokkrd3S5AJb1lBq1pCQCgiVYOstE+IxEGE83OqL3ikCQ\n" +
+                    "ysasp78sk0klJ7mTB0o5YdGVV9hG9NKK2/g57v7Q33FruUBLcJnSHYDClXBzdEZ1\n" +
+                    "x9WhNuCCgq1LdpRdm+WLv+r04mO8u3LwiISMObHL6+cMmvUadHlPyJ/gs9pwBBQR\n" +
+                    "VMw/4tMmtmHxrMtCqp3vR6+10RVPg0pZgCJ2ywcINFIZprY9nP8mMyZySn+ou4FK\n" +
+                    "jHMb9iPTdjKHbI84kpc8OBuAtmLTEsVq3P2QcmZgtA1xb8GeblTHEw4C91No5sI2\n" +
+                    "ZPbwWWA6I5IH+k0GXFt/gJ82WqjMzLk6RihbnUl0Ihue0PwISQqfGl4h6PRNCUS6\n" +
+                    "4/7UG1wU72rkIBNd7aSmneg5WM+D2vpb7+J0nZU2rkn6hgtzFIx1Pjrtq6Og7ukz\n" +
+                    "yiVhZ2+k+8ejItw2vDE3xIcCAwEAAQ==";
+            */
+            PublicKey lTestPubKey = keyManager.loadPublicKeyFromRSAPEMString(pubKeyStr);
+            encryptedStr = encryptData(lTestPubKey, "abc");
+            System.out.println(encryptedStr);
+
             // following code is to demo the signing of transaction
             accounts = ks.getAccounts();
             if (accounts.size() <= 0) {
@@ -352,10 +410,18 @@ public class MainActivity extends AppCompatActivity {
         */
     }
 
+    private String getPublicKeyFileName() {
+        return getFilesDir() + "/keystore/" +"publickey.pem";
+    }
+
+    private String getPrivateKeyFileName() {
+        return getFilesDir() + "/keystore/" +"privatekey.pem";
+    }
+
     private String createPublicKey() {
         String algorithm = "RSA";
         String signatureAlg = "SHA256withRSA";
-        int keySize = 2048;
+        int keySize = 4096;
         int certExpireInDays = 365;
         String commonName = "CN=KeyManagerTest";
         KeyManager keyManager = new KeyManagerImpl(
@@ -365,8 +431,8 @@ public class MainActivity extends AppCompatActivity {
                 certExpireInDays,
                 commonName);
 
-        String privKeyFileName = getFilesDir() + "/keystore/" + "privatekey.pem";
-        String publicKeyFileName = getFilesDir() + "/keystore/" +"publickey.pem";
+        String privKeyFileName = getPrivateKeyFileName();
+        String publicKeyFileName = getPublicKeyFileName();
 
         try {
             File f = new File(publicKeyFileName);
@@ -437,8 +503,8 @@ public class MainActivity extends AppCompatActivity {
 
     private void getPublicPrivateKeys() {
         KeyManager keyManager = new KeyManagerImpl();
-        String privKeyFileName = getFilesDir() + "/keystore/" + "privatekey.pem";
-        String publicKeyFileName = getFilesDir() + "/keystore/" +"publickey.pem";
+        String privKeyFileName = getPrivateKeyFileName();
+        String publicKeyFileName = getPublicKeyFileName();
 
         try {
             this.privateKey = keyManager.loadPrivateKeyFromRSAPEM(privKeyFileName);

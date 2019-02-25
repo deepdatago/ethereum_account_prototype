@@ -38,6 +38,7 @@ import android.util.Base64;
 import java.util.UUID;
 import java.security.Signature;
 import org.json.JSONObject;
+import org.json.JSONArray;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -45,6 +46,9 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.ShortBufferException;
 import javax.crypto.spec.SecretKeySpec;
+import java.util.*;
+
+import java.io.FileOutputStream;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -196,13 +200,7 @@ public class MainActivity extends AppCompatActivity {
                         long unixTime = System.currentTimeMillis() / 1000L;
                         String timeString = Long.toString(unixTime);
                         System.out.println("time: " + timeString);
-                        byte[] data = timeString.getBytes();
-
-                        Signature sig = Signature.getInstance("SHA256withRSA");
-                        sig.initSign(privateKey);
-                        sig.update(data);
-                        byte[] signatureBytes = sig.sign();
-                        transactionStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
+                        transactionStr = signStringByPrivateKey(privateKey, timeString);
                         transactionStr = URLEncoder.encode(transactionStr,"UTF-8");
                         System.out.println("Signature:" + transactionStr);
                         transactionStr = "/?from_address=" + account.getAddress().getHex() + "&time_stamp="+timeString+"&b64encoded_signature="+transactionStr;
@@ -250,7 +248,8 @@ public class MainActivity extends AppCompatActivity {
         }
 
         try {
-            createPublicKey();
+            // createPublicKey(); // to create a new set of keys
+            populateKeysIntoTextFiles(); // to pouplate from existing strings
             getPublicPrivateKeys();
             String encryptedStr = encryptData(publicKey, "abc");
             String decryptedStr = decryptData(privateKey, encryptedStr);
@@ -330,6 +329,22 @@ public class MainActivity extends AppCompatActivity {
             account = accounts.get(2);
             getRegisterRequest(account);
             // transactionStr += "\n" + getRegisterRequest(account);
+
+            // get group_invite request
+            {
+                Account fromAccount = accounts.get(0);
+                Account toAccount = accounts.get(1);
+                // List< HashMap<String, String> > inviteeList = new ArrayList<HashMap<String, String>>();
+                HashMap<String, String> inviteeMap = new HashMap<String, String>();
+                inviteeMap.put(toAccount.getAddress().getHex(), "key1");
+                // inviteeList.add(inviteeNode);
+
+
+                String groupAddress = "android-group-12345";
+                String requestStr = getGroupInviteRequest(fromAccount, groupAddress, inviteeMap);
+
+            }
+
         } catch (Exception e) {
             transactionStr = e.getMessage();
             e.printStackTrace();
@@ -416,6 +431,126 @@ public class MainActivity extends AppCompatActivity {
 
     private String getPrivateKeyFileName() {
         return getFilesDir() + "/keystore/" +"privatekey.pem";
+    }
+
+    private String signStringByPrivateKey(PrivateKey inPrivateKey, String inString) {
+        try {
+            byte[] data = inString.getBytes();
+            Signature sig = Signature.getInstance("SHA256withRSA");
+            sig.initSign(inPrivateKey);
+            sig.update(data);
+            byte[] signatureBytes = sig.sign();
+            String signatureStr = new String(Base64.encode(signatureBytes, Base64.DEFAULT));
+            return signatureStr;
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+    private void populateKeysIntoTextFiles() {
+        File outputFile = new File(getPrivateKeyFileName());
+        FileOutputStream privateFile = null;
+        String privateKeyStr = "-----BEGIN RSA PRIVATE KEY-----\n" +
+                "MIIJKgIBAAKCAgEAxYPYRsiEGWryhzdu5A02uBHAPc8o9d3Scq76g4Qy1DVyDitM\n" +
+                "+J7q2uaI6Mn3VaO4Y/dq+XdN9SJ4YXQggFWQeonuFmFP81y9r2nZ2IP1PYATPHul\n" +
+                "AJR8+jSh/gnDag+doJWPL5KOxbMaLMLWftUcn7qzui+teWpEraGatZDzNHcEq8/l\n" +
+                "j5ETCpsMXBwIa9IqhMk3Y6/Osc43aiSgUuDkH2CJOL2oKfJGfgU1C32Au58pCqpa\n" +
+                "NXHwWrisgBmCWadEne7xBNbKeWquub7wgrFSS6UXTSfOcwMXzheODq1v+IVGnyg9\n" +
+                "z6kyQ1lcaUDjEzZ5nXfwyDEYXmwY856C1tpZ5Prc0SOv1OgWORLOYCpUP04w9ok3\n" +
+                "VBMfhdZZ5mRbf5+Im1doF6y94CDh5x+OO105cg/w8Cm9m6jzY6iVbLFXnjWGRIAP\n" +
+                "YGhBFxw9DqflXkPH6XXn6J2eNKGHc2Z26tF/igyjgVqXHkFN6KmNJ2iNnFpun+Qe\n" +
+                "QCDhbiSxtunvMrHnyGH37e//W5JWymc8lEbDi1ASGzl6sflyMhfrl/rnkpMrraov\n" +
+                "nmtfri6PW2CMjaT0RixYF0dFPoKLsC8jODIXvUtjNTEciVkv0T7GhguXLubj0tBO\n" +
+                "j3Zce8bGOvjbzkpwiSGynqyF9770WMcH+xnQKrKcOTLjXLgmW1wZJ1/71rkCAwEA\n" +
+                "AQKCAgAEVH9fj+JLf1t5SOcSs1J1hxgYksvSVg5Yysq9qt6FZfWN53ecxLkf2ul5\n" +
+                "9wGH3Fq8wE4VUX8BRoPumQHkZlvQP+lbDr+WtXwIFjE7LKtp8X6adxh3Moop3xEF\n" +
+                "FXg2AUkindzBfXxJS8OhYxUaOzhRLSHnDUgHjyOZzd7rJ5YZWpmc3aYp91N8Sklj\n" +
+                "VI7/tCAQAKxI8G/+2GdBGbP1FS6THIXtm0TORJw0g4815Qa3NkZLUFBBdzG+f2ly\n" +
+                "tnxz1DWuI7Cfe0j9j+/sLQovR01nUKN54stFHLZ/I2ePHVDE2UEi2JpATPSH4vPi\n" +
+                "b9R6lZllcR1zehYPbd2/K4SxSqCpWUwFEey6/0tphoPBQKTLlo/JZ815L++jeG59\n" +
+                "qPUKPTygW/mPcSj53uXLvULd6gA6CPwQXyaJFxp0/kzhh0Olg3W40cJp0wOjvZxz\n" +
+                "x7LjYc/Khw+pqt3H9ezMJd+aOWP9Jhtk2Az38d44IewKcrthB/YE8m9DOWYSzEKb\n" +
+                "oVU+JgpWccFjITICvX7XGgAR9UzxPqzqDNv7onMEkCPuK3h2hh31sc+Gp+fwmjI2\n" +
+                "IQq6ntQonP1ODcayoKqIVIRCekhBYac21WBZOihjMEL7aXKUzN8ykxc0KNtO+ByH\n" +
+                "838HOjvdt9kENQXNPzq3e8eeDtHgFp4mrEB/u16OH9uUVDKtAQKCAQEA9Ue7TQZb\n" +
+                "sXL5OF08+IFqa7ydXrBaeiq/L5Igde0Mk13DWJDqV6g/h0iMrd4o99VFMPGUrtzW\n" +
+                "JhfWkZ3OAsdfEOKCTlU1iMyZOJIVfJI+8V9nUXreIRWt5+mr+EmubZBw5nCCwXMs\n" +
+                "7Ivvmd5n0KNnj4gGgJwWg+cXF9cCcG3i/JV59SX8HO5PvKahAJUH7+mRKriglaEM\n" +
+                "8QXlxhP7FUqix+vsYQyKtkt856rGyZVKy7d1MUKTct/BDNlArEhV5pK9hqmkXbCg\n" +
+                "fHG9jr9bVh+j3JujyusJtX+AzbZ0Hd+EK+bH97UH5RQeGCbCif7x+CSwQzVueXqi\n" +
+                "NXC0HRCQjTdUgQKCAQEAziWztz+xbLs/J1I4Xx4G2FIN9VFM0tnjMTupsvkJ09eH\n" +
+                "CgkgdtHTDCOYtTL1VO3bfoo6ylF40xMgQ9ixDZdecHU0MCvU0yrE2W7ElEmH4L49\n" +
+                "1ivJT90l5GDIsRVMP+dXI4TVF5er3rqUDXgR/2EMxm/yntl8qSy63FEra5XOKmNe\n" +
+                "qttRzd/V48AAoE9Ed3nisboZ+SXcuehai8B7uoOuQQdlB4cKuKuCoulVVdJkvK3W\n" +
+                "WCcxDPfhzJ7KuwKefXUcpl9ouCCnmk41EdzoQqGYDj8x9EdH6gdI2g7rVTh5d+xX\n" +
+                "VOPgcxMwSTh09sUWxgIXDnk57QGQtNDqeukEny8GOQKCAQEAiLINZIPiniZhVlRA\n" +
+                "Io6dbKWVXqwSAHvKSQy7In2VwJtEvxskPu35Wb/JBy0Ez/n/saMxJbLVdi1a25SC\n" +
+                "t3G9PX++90DtsOu1iJ2BdAddJM/ymKpNGUsnvFOyD5GgsFcLVKHnfUBfDQV/5tTY\n" +
+                "LqKimI9KcGqM8b3cVODy7w2Orw3vBfzBYK4/qfeDSvvDjKUyzghPFpTGzZxnzdhc\n" +
+                "2iTaS2jkN8HxnF69oa6/UqDtKlN38JgV7LNet3ZsYJd/qBynm2D3xW8mQbRx3Bgx\n" +
+                "IvJHNC9ZPUF4C7qfYgYI+I0U8BKR5y7w024+x17ylE2NNKndwdcJVpJNzFKfToNo\n" +
+                "zArGAQKCAQEAzduedL8ZCZCPB1A21N1iToDaSYDPa7uEAfUniH7iznZq9p2Ymq77\n" +
+                "xyKA62mgzhfc2admAAWN15JA5R+t5vmiqECSRgxvMhSCkPLpQX+QPeEcVRRSqvsX\n" +
+                "TNFNeHDhPOti/Cg4t5+RVRESqcSejFy46ix+pxxePX5ad4pjBsOJJpEmxw3Oyfzd\n" +
+                "Vdq1hWDC6WCA/aPvLfseSVP7n5UuuVmoGG4u+G5lSXaUNOU3f0VjrXsXEd7JP78F\n" +
+                "8FUd89Qwuu3JF2ctZrnNRO0WV+k20tsVwhxfYSYRbWWq3X6KiQalXhlYOIB68c9W\n" +
+                "p7fGLWsxS7hol9589u1aOQZrMSQipmfKGQKCAQEAjiEsExdPV7wTZ0yfhHnv6lkR\n" +
+                "6yH3qbz+8q+/q3cmKsD0gH1AN+eQPAGeb8cYlKFG8cyNeALqfwBvaqllKO7BERW9\n" +
+                "nvpqtmZf0A4XPtAV1ntzRRlZsinTPA+xyu/r6Iu8zMi8sITlwZMRa0TGawWvHPok\n" +
+                "EtRgqp/Oq3DkZvAsMBLLjVxu9kFWkYooZ3wH70fcvF81RrFKHlI18ME0XZW/uai4\n" +
+                "RHQI63N69CXMZre294Verqx2EAFeZvwguY2U0ax9U7VvVFwaGsV7DWbYhw1Be3UF\n" +
+                "Jh+2lu0Aacsuh+h5Kdzc7Kqn+VVcUy1VEhqWcCvaZB6xzxGEr/hGhDykZab94g==\n" +
+                "-----END RSA PRIVATE KEY-----";
+        try {
+            privateFile = new FileOutputStream(outputFile);
+            privateFile.write(privateKeyStr.getBytes());
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        finally {
+            try {
+                privateFile.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        File publicKeyFile = new File(getPublicKeyFileName());
+        FileOutputStream publicKeyFileStream = null;
+        String publicKeyStr = "-----BEGIN PUBLIC KEY-----\n" +
+                "MIMAAiMwDQYJKoZIhvcNAQEBBQADgwACDwAwggIKAoICAQDFg9hGyIQZavKHN27k\n" +
+                "DTa4EcA9zyj13dJyrvqDhDLUNXIOK0z4nura5ojoyfdVo7hj92r5d031InhhdCCA\n" +
+                "VZB6ie4WYU/zXL2vadnYg/U9gBM8e6UAlHz6NKH+CcNqD52glY8vko7FsxoswtZ+\n" +
+                "1RyfurO6L615akStoZq1kPM0dwSrz+WPkRMKmwxcHAhr0iqEyTdjr86xzjdqJKBS\n" +
+                "4OQfYIk4vagp8kZ+BTULfYC7nykKqlo1cfBauKyAGYJZp0Sd7vEE1sp5aq65vvCC\n" +
+                "sVJLpRdNJ85zAxfOF44OrW/4hUafKD3PqTJDWVxpQOMTNnmdd/DIMRhebBjznoLW\n" +
+                "2lnk+tzRI6/U6BY5Es5gKlQ/TjD2iTdUEx+F1lnmZFt/n4ibV2gXrL3gIOHnH447\n" +
+                "XTlyD/DwKb2bqPNjqJVssVeeNYZEgA9gaEEXHD0Op+VeQ8fpdefonZ40oYdzZnbq\n" +
+                "0X+KDKOBWpceQU3oqY0naI2cWm6f5B5AIOFuJLG26e8ysefIYfft7/9bklbKZzyU\n" +
+                "RsOLUBIbOXqx+XIyF+uX+ueSkyutqi+ea1+uLo9bYIyNpPRGLFgXR0U+gouwLyM4\n" +
+                "Mhe9S2M1MRyJWS/RPsaGC5cu5uPS0E6Pdlx7xsY6+NvOSnCJIbKerIX3vvRYxwf7\n" +
+                "GdAqspw5MuNcuCZbXBknX/vWuQIDAQAB\n" +
+                "-----END PUBLIC KEY-----";
+        try {
+            publicKeyFileStream = new FileOutputStream(publicKeyFile);
+            publicKeyFileStream.write(publicKeyStr.getBytes());
+        }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
+        finally {
+            try {
+                publicKeyFileStream.close();
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        return;
     }
 
     private String createPublicKey() {
@@ -667,6 +802,48 @@ public class MainActivity extends AppCompatActivity {
             System.out.println("decrypted name: " + decryptedName);
             requestNode.put("name", encryptedName);
             requestNode.put("transaction", transactionStr);
+            transactionStr = requestNode.toString();
+            System.out.println("register transaction: " + transactionStr);
+        } catch (Exception e) {
+            transactionStr = e.getMessage();
+            e.printStackTrace();
+
+        }
+        return transactionStr;
+    }
+
+    private String getGroupInviteRequest(Account account, String groupAddress, HashMap<String, String> inviteeMap) {
+        String transactionStr = null;
+        try {
+            System.out.println("from_address: " + account.getAddress().getHex());
+            // System.out.println("to_address: " + toAccountAddress);
+
+            // replace data by public key
+            long unixTime = System.currentTimeMillis() / 1000L;
+            String timeString = Long.toString(unixTime);
+
+            String signedTimeString = signStringByPrivateKey(privateKey, timeString);
+
+            // System.out.println("public key: " + data);
+            transactionStr = signTransaction(account, signedTimeString.getBytes("UTF8"));
+            System.out.println("register input length: " + transactionStr.length() + " string: " + transactionStr);
+            JSONObject requestNode = new JSONObject();
+            requestNode.put("from_address", account.getAddress().getHex());
+            requestNode.put("group_address", groupAddress);
+            requestNode.put("time_stamp", timeString);
+            System.out.println("time stamp: " + timeString + " signed time stamp: " + signStringByPrivateKey(privateKey, timeString));
+            requestNode.put("transaction", transactionStr);
+
+            // add inviteeList into JSONArray
+            JSONObject inviteeDict = new JSONObject();
+            Set<String> keySet = inviteeMap.keySet();
+            for (String key: keySet) {
+                // JSONObject inviteeNode = new JSONObject();
+                inviteeDict.put(key, inviteeMap.get(key));
+                // inviteeArray.put(inviteeNode);
+            }
+            requestNode.put("group_invitee_list", inviteeDict);
+
             transactionStr = requestNode.toString();
             System.out.println("register transaction: " + transactionStr);
         } catch (Exception e) {

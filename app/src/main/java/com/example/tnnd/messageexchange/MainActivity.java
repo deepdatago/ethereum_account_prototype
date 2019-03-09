@@ -503,6 +503,7 @@ public class MainActivity extends AppCompatActivity {
                 "Jh+2lu0Aacsuh+h5Kdzc7Kqn+VVcUy1VEhqWcCvaZB6xzxGEr/hGhDykZab94g==\n" +
                 "-----END RSA PRIVATE KEY-----";
         try {
+            outputFile.getParentFile().mkdirs();
             privateFile = new FileOutputStream(outputFile);
             privateFile.write(privateKeyStr.getBytes());
         }
